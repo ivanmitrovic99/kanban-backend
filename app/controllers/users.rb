@@ -1,6 +1,7 @@
 KanbanBackend::App.controllers :users do
   # GET /api/v1/users
   get :index, map: Api.path(:users) do
+    authenticate!
     @users = User.order(:id).all
     render 'users/index'
   end

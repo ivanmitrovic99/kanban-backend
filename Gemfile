@@ -23,6 +23,9 @@ gem 'pg'
 # Secure password hashing for the User model
 gem 'bcrypt'
 
+# JSON Web Tokens for stateless authentication
+gem 'jwt'
+
 # JSON view templating
 gem 'rabl'
 gem 'json'
