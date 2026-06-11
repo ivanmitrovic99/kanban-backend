@@ -2,13 +2,13 @@ KanbanBackend::App.controllers :users do
   # GET /api/v1/users
   get :index, map: Api.path(:users) do
     authenticate!
-    @users = User.order(:id).all
+    @users = User.where(active: true).order(:id).all
     render 'users/index'
   end
 
   # GET /api/v1/users/:id
   get :show, map: Api.path(:users, ':id') do
-    @user = User[params[:id]] or halt_not_found
+    @user = User.where(id: params[:id], active: true).first or halt_not_found
     render 'users/show'
   end
 
@@ -25,7 +25,7 @@ KanbanBackend::App.controllers :users do
 
   # PUT/PATCH /api/v1/users/:id
   put :update, map: Api.path(:users, ':id') do
-    @user = User[params[:id]] or halt_not_found
+    @user = User.where(id:params[:id]).first or halt_not_found
     if assign_attributes(@user).save
       render 'users/show'
     else
@@ -35,10 +35,10 @@ KanbanBackend::App.controllers :users do
 
   # DELETE /api/v1/users/:id
   delete :destroy, map: Api.path(:users, ':id') do
-    user = User[params[:id]] or halt_not_found
-    user.destroy
+    @user = User.where(id:params[:id]).first or halt_not_found
+    @user.update(active: false)
+    # user.destroy     for delete
     status 204
-    ''
   end
 
   helpers do
