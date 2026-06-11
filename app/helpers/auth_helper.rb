@@ -31,6 +31,11 @@ KanbanBackend::App.helpers do
 
     @current_user
   end
+
+  def authorize_owner!(resource_user_id)
+    authenticate!
+    halt 403, {error: 'You are not allowed to perform this action'}.to_json unless resource_user_id.to_i == @current_user.id
+  end
       
   private
 

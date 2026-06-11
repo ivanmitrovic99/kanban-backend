@@ -8,7 +8,8 @@ KanbanBackend::App.controllers :users do
 
   # GET /api/v1/users/:id
   get :show, map: Api.path(:users, ':id') do
-    @user = User.where(id: params[:id], active: true).first or halt_not_found
+    halt 404 unless valid_id?(params[:id])
+    @user = User.where(id: params[:id], active: true).first or halt 404
     render 'users/show'
   end
 
@@ -25,7 +26,9 @@ KanbanBackend::App.controllers :users do
 
   # PUT/PATCH /api/v1/users/:id
   put :update, map: Api.path(:users, ':id') do
-    @user = User.where(id:params[:id]).first or halt_not_found
+    halt 404 unless valid_id?(params[:id])
+    authorize_owner!(params[:id])
+    @user = User.where(id:params[:id]).first or halt 404
     if assign_attributes(@user).save
       render 'users/show'
     else
@@ -35,7 +38,9 @@ KanbanBackend::App.controllers :users do
 
   # DELETE /api/v1/users/:id
   delete :destroy, map: Api.path(:users, ':id') do
-    @user = User.where(id:params[:id]).first or halt_not_found
+    halt 404 unless valid_id?(params[:id])
+    authorize_owner!(params[:id])
+    @user = User.where(id:params[:id]).first or halt 404
     @user.update(active: false)
     # user.destroy     for delete
     status 204
@@ -49,12 +54,14 @@ KanbanBackend::App.controllers :users do
       user
     end
 
-    def halt_not_found
-      halt 404, { error: 'User not found' }.to_json
-    end
-
     def unprocessable(record)
       halt 422, { errors: record.errors.full_messages }.to_json
+    end
+
+    def valid_id?(id)
+      Integer(id, 10).positive?
+    rescue ArgumentError, TypeError
+      false
     end
   end
 end

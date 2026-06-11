@@ -24,6 +24,20 @@ module KanbanBackend
       content_type :json
     end
 
+    not_found do
+      content_type :json
+      { error: 'Not found' }.to_json
+    end
+
+    error do
+      err = env['sinatra.error']                       
+      logger.error "#{err.class}: #{err.message}" if err
+      logger.error err.backtrace.join("\n") if err     
+      content_type :json
+      status 500
+      { error: 'Internal server error' }.to_json       
+    end
+
     # Make a parsed JSON request body available to controllers as `json_params`.
     helpers do
       def json_params
@@ -63,8 +77,8 @@ module KanbanBackend
     # Application configuration options.
     #
     # set :raise_errors, true       # Raise exceptions (will stop application) (default for test)
-    # set :dump_errors, true        # Exception backtraces are written to STDERR (default for production/development)
-    # set :show_exceptions, true    # Shows a stack trace in browser (default for development)
+    set :dump_errors, true        # Exception backtraces are written to STDERR (default for production/development)
+    set :show_exceptions, false    # Shows a stack trace in browser (default for development)
     # set :logging, true            # Logging in STDOUT for development and file for production (default only for development)
     # set :public_folder, 'foo/bar' # Location for static assets (default root/public)
     # set :reload, false            # Reload application files (default in development)
