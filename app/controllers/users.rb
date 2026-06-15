@@ -30,22 +30,22 @@ KanbanBackend::App.controllers :users do
   end
 
   # PUT/PATCH /api/v1/users/:id
+  # Both verbs share one handler: updates are partial (PATCH semantics) because
+  # assign_attributes uses `missing: :skip`, so PUT here also leaves absent
+  # fields untouched rather than clearing them.
   put :update, map: Api.path(:users, ':id') do
-    halt 404 unless valid_id?(params[:id])
-    authorize_owner!(params[:id])
-    @user = User.where(id:params[:id]).active.first or halt 404
-    if assign_attributes(@user).save
-      render 'users/show'
-    else
-      unprocessable(@user)
-    end
+    update_user
+  end
+
+  patch :update, map: Api.path(:users, ':id') do
+    update_user
   end
 
   # DELETE /api/v1/users/:id
   delete :destroy, map: Api.path(:users, ':id') do
     halt 404 unless valid_id?(params[:id])
     authorize_owner!(params[:id])
-    @user = User.where(id:params[:id]).active.first or halt 404
+    @user = User.where(id: params[:id]).active.first or halt 404
     if @user.update(active: false)
       status 204
     else
@@ -54,6 +54,18 @@ KanbanBackend::App.controllers :users do
   end
 
   helpers do
+    # Shared PUT/PATCH update handler.
+    def update_user
+      halt 404 unless valid_id?(params[:id])
+      authorize_owner!(params[:id])
+      @user = User.where(id: params[:id]).active.first or halt 404
+      if assign_attributes(@user).save
+        render 'users/show'
+      else
+        unprocessable(@user)
+      end
+    end
+
     # Whitelist the writable attributes. `missing: :skip` leaves fields
     # untouched when they are absent from the request body (partial updates).
     def assign_attributes(user)
