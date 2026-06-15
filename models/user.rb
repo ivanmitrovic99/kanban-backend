@@ -28,7 +28,9 @@ class User < Sequel::Model
   def validate
     super
     validates_presence %i[name email]
-    validates_unique :email
+    validates_unique :email do |ds|
+      ds.where(active: true)
+    end
     validates_format URI::MailTo::EMAIL_REGEXP, :email, message: 'is not a valid email'
     validates_min_length 8, :password, allow_nil: true
     errors.add(:password, 'is required') if password_digest.nil?

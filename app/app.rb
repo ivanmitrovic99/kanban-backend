@@ -15,6 +15,10 @@ module KanbanBackend
     register Padrino::Mailer
     register Padrino::Helpers
 
+    # Rate limiting: throttle brute-force login attempts (rules in config/rack_attack.rb).
+    require Padrino.root('config', 'rack_attack')
+    use Rack::Attack
+
     # Stateless JSON API: no sessions, no CSRF token exchange.
     disable :sessions
     disable :protect_from_csrf

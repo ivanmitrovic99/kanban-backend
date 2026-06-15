@@ -1,8 +1,13 @@
 KanbanBackend::App.controllers :users do
+
+  DEFAULT_PER_PAGE = 20
+  MAX_PER_PAGE = 200
+
   # GET /api/v1/users
   get :index, map: Api.path(:users) do
     authenticate!
-    @users = User.where(active: true).order(:id).all
+    per_page, page = pagination_params
+    @users = User.where(active: true).order(:id).limit(per_page).offset((page - 1) * per_page).all
     render 'users/index'
   end
 
@@ -63,5 +68,14 @@ KanbanBackend::App.controllers :users do
     rescue ArgumentError, TypeError
       false
     end
+
+    def pagination_params
+      per_page = params[:per_page].to_i
+      per_page = DEFAULT_PER_PAGE if per_page <= 0
+      per_page = [per_page, MAX_PER_PAGE].min
+      page = [params[:page].to_i, 1].max
+      [per_page, page]
+    end
+
   end
 end
