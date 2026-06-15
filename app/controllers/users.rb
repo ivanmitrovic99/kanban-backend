@@ -7,14 +7,14 @@ KanbanBackend::App.controllers :users do
   get :index, map: Api.path(:users) do
     authenticate!
     per_page, page = pagination_params
-    @users = User.where(active: true).order(:id).limit(per_page).offset((page - 1) * per_page).all
+    @users = User.active.order(:id).limit(per_page).offset((page - 1) * per_page).all
     render 'users/index'
   end
 
   # GET /api/v1/users/:id
   get :show, map: Api.path(:users, ':id') do
     halt 404 unless valid_id?(params[:id])
-    @user = User.where(id: params[:id], active: true).first or halt 404
+    @user = User.where(id: params[:id]).active.first or halt 404
     render 'users/show'
   end
 
@@ -33,7 +33,7 @@ KanbanBackend::App.controllers :users do
   put :update, map: Api.path(:users, ':id') do
     halt 404 unless valid_id?(params[:id])
     authorize_owner!(params[:id])
-    @user = User.where(id:params[:id]).first or halt 404
+    @user = User.where(id:params[:id]).active.first or halt 404
     if assign_attributes(@user).save
       render 'users/show'
     else
@@ -45,10 +45,12 @@ KanbanBackend::App.controllers :users do
   delete :destroy, map: Api.path(:users, ':id') do
     halt 404 unless valid_id?(params[:id])
     authorize_owner!(params[:id])
-    @user = User.where(id:params[:id]).first or halt 404
-    @user.update(active: false)
-    # user.destroy     for delete
-    status 204
+    @user = User.where(id:params[:id]).active.first or halt 404
+    if @user.update(active: false)
+      status 204
+    else
+      unprocessable(@user)
+    end
   end
 
   helpers do

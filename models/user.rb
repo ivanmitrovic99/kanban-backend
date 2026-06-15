@@ -35,4 +35,10 @@ class User < Sequel::Model
     validates_min_length 8, :password, allow_nil: true
     errors.add(:password, 'is required') if password_digest.nil?
   end
+
+  dataset_module do
+    def active
+      where(active: true)
+    end
+  end
 end
