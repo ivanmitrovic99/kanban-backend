@@ -12,3 +12,6 @@ db/*.db
 
 # Bundler binstubs
 bin/
+
+# SimpleCov output
+/coverage
