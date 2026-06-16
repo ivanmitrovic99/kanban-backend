@@ -16,7 +16,7 @@ KanbanBackend::App.helpers do
 
   # Sign a token carrying the user's id and an expiry.
   def issue_token(user)
-    payload = { user_id: user.id, exp: Time.now.to_i + TOKEN_TTL, iss: JWT_ISSUER, aud: JWT_AUDIENCE }
+    payload = { user_id: user.id, exp: Time.now.to_i + TOKEN_TTL, iss: JWT_ISSUER, aud: JWT_AUDIENCE, jti: SecureRandom.uuid }
     JWT.encode(payload, jwt_secret, JWT_ALGORITHM)
   end
 
@@ -27,8 +27,9 @@ KanbanBackend::App.helpers do
     token = bearer_token
     unauthorized!('Missing or malformed Authorization header') unless token
 
-    payload = decode!(token)
-    @current_user = User.active.first(id: payload['user_id'])
+    @token_payload = decode!(token)
+    unauthorized!("Token has been revoked!") if RevokedToken.where(jti: @token_payload['jti']).any?
+    @current_user = User.active.first(id: @token_payload['user_id'])
     unauthorized!('Token refers to a user that no longer exists') unless @current_user
 
     @current_user
