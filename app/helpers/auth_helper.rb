@@ -3,10 +3,12 @@
 # Flow:
 #   1. POST /api/v1/login  -> issue_token(user)  -> { token: "..." }
 #   2. Client sends header  Authorization: Bearer <token>  on later requests.
-#   3. Protected routes call authenticate! (or read current_user for soft auth).
+#   3. Protected routes call authenticate!
 KanbanBackend::App.helpers do
   JWT_ALGORITHM = 'HS256'.freeze
   TOKEN_TTL     = 24 * 60 * 60 # seconds (24h)
+  JWT_ISSUER   = 'kanban-backend'.freeze
+  JWT_AUDIENCE = 'kanban-api'.freeze
 
   def jwt_secret
     ENV.fetch('JWT_SECRET')
@@ -14,7 +16,7 @@ KanbanBackend::App.helpers do
 
   # Sign a token carrying the user's id and an expiry.
   def issue_token(user)
-    payload = { user_id: user.id, exp: Time.now.to_i + TOKEN_TTL }
+    payload = { user_id: user.id, exp: Time.now.to_i + TOKEN_TTL, iss: JWT_ISSUER, aud: JWT_AUDIENCE }
     JWT.encode(payload, jwt_secret, JWT_ALGORITHM)
   end
 
@@ -26,7 +28,7 @@ KanbanBackend::App.helpers do
     unauthorized!('Missing or malformed Authorization header') unless token
 
     payload = decode!(token)
-    @current_user = User[payload['user_id']]
+    @current_user = User.active.first(id: payload['user_id'])
     unauthorized!('Token refers to a user that no longer exists') unless @current_user
 
     @current_user
@@ -45,21 +47,13 @@ KanbanBackend::App.helpers do
 
   # Verify + decode, mapping each failure mode to a specific 401.
   def decode!(token)
-    JWT.decode(token, jwt_secret, true, algorithm: JWT_ALGORITHM).first
+    JWT.decode(token, jwt_secret, true, algorithm: JWT_ALGORITHM, iss: JWT_ISSUER, verify_iss: true, aud: JWT_AUDIENCE, verify_aud: true).first
   rescue JWT::ExpiredSignature
     unauthorized!('Token has expired')
   rescue JWT::VerificationError
     unauthorized!('Token signature is invalid')
   rescue JWT::DecodeError
     unauthorized!('Token is malformed')
-  end
-
-  # Same decode, but swallow every failure to nil (for current_user).
-  def lookup_user(token)
-    payload, = JWT.decode(token, jwt_secret, true, algorithm: JWT_ALGORITHM)
-    User[payload['user_id']]
-  rescue JWT::DecodeError
-    nil
   end
 
   def unauthorized!(message)

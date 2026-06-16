@@ -10,6 +10,11 @@ Bundler.require(:default, RACK_ENV)
 require 'dotenv'
 Dotenv.load(File.join(PADRINO_ROOT, '.env'))
 
+# Fail fast: a missing or weak JWT secret must stop the app at boot, not mid-request.
+secret = ENV['JWT_SECRET']
+abort 'FATAL: JWT_SECRET must be set and at least 32 chars (try: ruby -rsecurerandom -e "puts SecureRandom.hex(64)")' if secret.nil? || secret.length < 32
+
+
 ##
 # ## Enable devel logging
 #
