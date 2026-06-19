@@ -59,7 +59,7 @@ RSpec.describe 'Users API' do
       get '/api/v1/users', {}, auth_for(viewer)
 
       expect(last_response.status).to eq(200)
-      emails = json_body.map { |u| u['email'] }
+      emails = json_body['data'].map { |u| u['email'] }
       expect(emails).to include('active@example.com')
       expect(emails).not_to include('inactive@example.com')
     end
@@ -70,11 +70,11 @@ RSpec.describe 'Users API' do
 
       get '/api/v1/users', { per_page: 2, page: 1 }, auth_for(viewer)
       expect(last_response.status).to eq(200)
-      expect(json_body.size).to eq(2)
-      page1_ids = json_body.map { |u| u['id'] }
+      expect(json_body['data'].size).to eq(2)
+      page1_ids = json_body['data'].map { |u| u['id'] }
 
       get '/api/v1/users', { per_page: 2, page: 2 }, auth_for(viewer)
-      page2_ids = json_body.map { |u| u['id'] }
+      page2_ids = json_body['data'].map { |u| u['id'] }
 
       expect(page2_ids).not_to eq(page1_ids)
       expect(page1_ids & page2_ids).to be_empty
@@ -82,27 +82,36 @@ RSpec.describe 'Users API' do
   end
 
   describe 'GET /api/v1/users/:id (show)' do
-    it 'returns the user for a valid id (public, no auth required)' do
-      user = create_user(email: 'show@example.com')
+    it 'requires authentication' do
+      user = create_user
       get "/api/v1/users/#{user.id}"
+      expect(last_response.status).to eq(401)
+    end
+
+    it 'returns the user for a valid id when authenticated' do
+      user = create_user(email: 'show@example.com')
+      get "/api/v1/users/#{user.id}", {}, auth_for(user)
       expect(last_response.status).to eq(200)
       expect(json_body['email']).to eq('show@example.com')
     end
 
     it 'returns 404 for a non-integer id' do
-      get '/api/v1/users/abc'
+      viewer = create_user
+      get '/api/v1/users/abc', {}, auth_for(viewer)
       expect(last_response.status).to eq(404)
     end
 
     it 'returns 404 for a missing id' do
-      get '/api/v1/users/999999'
+      viewer = create_user
+      get '/api/v1/users/999999', {}, auth_for(viewer)
       expect(last_response.status).to eq(404)
     end
 
     it 'returns 404 for a soft-deleted user' do
-      user = create_user(email: 'gone@example.com')
-      user.update(active: false)
-      get "/api/v1/users/#{user.id}"
+      viewer = create_user(email: 'viewer@example.com')
+      gone   = create_user(email: 'gone@example.com')
+      gone.update(active: false)
+      get "/api/v1/users/#{gone.id}", {}, auth_for(viewer)
       expect(last_response.status).to eq(404)
     end
   end
@@ -163,13 +172,15 @@ RSpec.describe 'Users API' do
     end
 
     it 'soft-deletes own record (204) and then 404s on show' do
-      user = create_user(email: 'del@example.com')
+      viewer = create_user(email: 'viewer-del@example.com')
+      user   = create_user(email: 'del@example.com')
 
       delete "/api/v1/users/#{user.id}", {}, auth_for(user)
       expect(last_response.status).to eq(204)
       expect(User[user.id].active).to be(false)
 
-      get "/api/v1/users/#{user.id}"
+      # A still-active viewer (the deleted user's own token is now rejected).
+      get "/api/v1/users/#{user.id}", {}, auth_for(viewer)
       expect(last_response.status).to eq(404)
     end
 

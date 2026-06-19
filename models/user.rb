@@ -33,7 +33,9 @@ class User < Sequel::Model
     end
     validates_format URI::MailTo::EMAIL_REGEXP, :email, message: 'is not a valid email'
     validates_min_length 8, :password, allow_nil: true
+    validates_max_length 72, :password, allow_nil: true
     errors.add(:password, 'is required') if password_digest.nil?
+    errors.add(:password, 'cannot be blank') if @password && @password.strip.empty?
   end
 
   dataset_module do

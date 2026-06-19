@@ -11,7 +11,8 @@ pg_defaults = {
   user:     ENV.fetch('DATABASE_USER', 'voi'),
   password: ENV.fetch('DATABASE_PASSWORD'), # required; set in .env (see .env.example)
   max_connections: ENV.fetch('DATABASE_POOL', 5).to_i,
-  loggers:  [logger]
+  loggers:  [logger],
+  sql_log_level: :debug
 }
 
 connections = {

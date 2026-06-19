@@ -7,12 +7,20 @@ KanbanBackend::App.controllers :users do
   get :index, map: Api.path(:users) do
     authenticate!
     per_page, page = pagination_params
+    total = User.active.count
     @users = User.active.order(:id).limit(per_page).offset((page - 1) * per_page).all
+    @meta = {
+      page: page,
+      per_page: per_page,
+      total: total,
+      total_pages: (total.to_f / per_page).ceil
+    }
     render 'users/index'
   end
 
   # GET /api/v1/users/:id
   get :show, map: Api.path(:users, ':id') do
+    authenticate!
     halt 404 unless valid_id?(params[:id])
     @user = User.where(id: params[:id]).active.first or halt 404
     render 'users/show'
