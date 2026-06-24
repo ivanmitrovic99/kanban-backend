@@ -33,6 +33,20 @@ RSpec.describe 'Users API' do
       expect(json_body['errors'].join).to match(/password/i)
     end
 
+    it 'rejects a password longer than 72 characters with 422' do
+      # bcrypt silently truncates beyond 72 bytes, so we reject it explicitly.
+      post_json '/api/v1/users', { name: 'X', email: 'long@example.com', password: 'a' * 73 }
+      expect(last_response.status).to eq(422)
+      expect(json_body['errors'].join).to match(/password/i)
+    end
+
+    it 'rejects a whitespace-only password with 422' do
+      # Long enough to clear min-length, but blank once stripped.
+      post_json '/api/v1/users', { name: 'X', email: 'blank@example.com', password: ' ' * 10 }
+      expect(last_response.status).to eq(422)
+      expect(json_body['errors'].join).to match(/password.*blank/i)
+    end
+
     it 'rejects a duplicate email among active users with 422' do
       create_user(email: 'dup@example.com')
       post_json '/api/v1/users', { name: 'X', email: 'dup@example.com', password: 'password123' }
@@ -78,6 +92,21 @@ RSpec.describe 'Users API' do
 
       expect(page2_ids).not_to eq(page1_ids)
       expect(page1_ids & page2_ids).to be_empty
+    end
+
+    it 'returns pagination metadata reflecting the active-user total' do
+      viewer = create_user(email: 'meta@example.com') # 1 active user
+      4.times { |i| create_user(email: "m#{i}@example.com") } # + 4 = 5 total
+
+      get '/api/v1/users', { per_page: 2, page: 1 }, auth_for(viewer)
+
+      expect(last_response.status).to eq(200)
+      expect(json_body['meta']).to eq(
+        'page' => 1,
+        'per_page' => 2,
+        'total' => 5,
+        'total_pages' => 3 # (5 / 2.0).ceil
+      )
     end
   end
 
@@ -191,6 +220,18 @@ RSpec.describe 'Users API' do
       delete "/api/v1/users/#{user.id}", {}, auth_for(user)
 
       expect(last_response.status).to eq(422)
+    end
+  end
+
+  describe 'rate limiting on POST /api/v1/users' do
+    it 'returns 429 after 3 signups from the same IP in the window' do
+      3.times do |i|
+        post_json '/api/v1/users', { name: 'X', email: "signup#{i}@example.com", password: 'password123' }
+        expect(last_response.status).to eq(201)
+      end
+
+      post_json '/api/v1/users', { name: 'X', email: 'signup-over@example.com', password: 'password123' }
+      expect(last_response.status).to eq(429)
     end
   end
 end
