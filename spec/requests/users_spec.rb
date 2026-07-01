@@ -67,7 +67,7 @@ RSpec.describe 'Users API' do
     end
 
     it 'lists only active users when authenticated' do
-      viewer   = create_user(email: 'active@example.com')
+      viewer   = create_user(email: 'active@example.com', role: 'admin')
       create_user(email: 'inactive@example.com').update(active: false)
 
       get '/api/v1/users', {}, auth_for(viewer)
@@ -79,7 +79,7 @@ RSpec.describe 'Users API' do
     end
 
     it 'paginates with per_page and page (distinct pages)' do
-      viewer = create_user(email: 'viewer@example.com')
+      viewer = create_user(email: 'viewer@example.com', role: 'admin')
       4.times { |i| create_user(email: "p#{i}@example.com") }
 
       get '/api/v1/users', { per_page: 2, page: 1 }, auth_for(viewer)
@@ -95,7 +95,7 @@ RSpec.describe 'Users API' do
     end
 
     it 'returns pagination metadata reflecting the active-user total' do
-      viewer = create_user(email: 'meta@example.com') # 1 active user
+      viewer = create_user(email: 'meta@example.com', role: 'admin') # 1 active user
       4.times { |i| create_user(email: "m#{i}@example.com") } # + 4 = 5 total
 
       get '/api/v1/users', { per_page: 2, page: 1 }, auth_for(viewer)

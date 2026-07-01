@@ -22,7 +22,12 @@ class User < Sequel::Model
 
   def before_validation
     self.email = email.to_s.downcase.strip unless email.nil?
+    self.role ||= 'member'
     super
+  end
+
+  def admin?
+   role == 'admin'
   end
 
   def validate
@@ -34,6 +39,7 @@ class User < Sequel::Model
     validates_format URI::MailTo::EMAIL_REGEXP, :email, message: 'is not a valid email'
     validates_min_length 8, :password, allow_nil: true
     validates_max_length 72, :password, allow_nil: true
+    validates_includes %w[member admin], :role
     errors.add(:password, 'is required') if password_digest.nil?
     errors.add(:password, 'cannot be blank') if @password && @password.strip.empty?
   end

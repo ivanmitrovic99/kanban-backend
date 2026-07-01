@@ -39,7 +39,16 @@ KanbanBackend::App.helpers do
     authenticate!
     halt 403, {error: 'You are not allowed to perform this action'}.to_json unless resource_user_id.to_i == @current_user.id
   end
-      
+
+  def authorize_admin!
+    authenticate!
+    halt 403, {error: 'You are not allowed to perform this action'}.to_json unless @current_user.admin?
+  end
+
+  def can_see_email?(user)
+    @current_user && (@current_user.admin? || @current_user.id == user.id)
+  end
+  
   private
 
   def bearer_token

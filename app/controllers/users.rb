@@ -5,7 +5,7 @@ KanbanBackend::App.controllers :users do
 
   # GET /api/v1/users
   get :index, map: Api.path(:users) do
-    authenticate!
+    authorize_admin!
     per_page, page = pagination_params
     total = User.active.count
     @users = User.active.order(:id).limit(per_page).offset((page - 1) * per_page).all
@@ -31,6 +31,7 @@ KanbanBackend::App.controllers :users do
     @user = assign_attributes(User.new)
     if @user.save
       status 201
+      @current_user = @user
       render 'users/show'
     else
       unprocessable(@user)
